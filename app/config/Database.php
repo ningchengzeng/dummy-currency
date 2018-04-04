@@ -14,14 +14,13 @@ use MongoDB\Client;
 class Database {
     private $config = array(
         "url" => 'mongodb://127.0.0.1/',
-        "database" => "dummy_currency"
+        "database" => "local"
     );
 
     public function init(){
         Flight::map("db", function(){
-            $client = new Client();
-            $client->selectDatabase($this->config["database"]);
-            return $client;
+            $client = new Client($this->config["url"]);
+            return $client->selectDatabase($this->config["database"]);
         });
     }
 }
