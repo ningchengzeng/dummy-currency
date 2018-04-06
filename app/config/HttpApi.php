@@ -13,7 +13,7 @@ use flight;
 class HttpApi {
     public function init(){
         Flight::register("currency", "\App\Controllers\api\CurrencyController");
-        Flight::route("/api/currency/currencyindexAll", function(){
+        Flight::route("/api/currency/indexAll", function(){
             $currency = Flight::currency();
             Flight::json($currency->indexAll());
         });
@@ -49,10 +49,41 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->hotconcept());
         });
-        Flight::route("/api/currency/getDetails", function(){
+        Flight::route("/api/currency/getCurrencies", function(){
             $currency = Flight::currency();
-            Flight::json($currency->getDetails());
+            Flight::json($currency->getCurrencies());
         });
+        Flight::route("/api/currency/getNewCoin", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getNewCoin());
+        });
+        Flight::route("/api/currency/getExchange", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getExchange());
+        });
+        Flight::route("/api/currency/getExchangeCount", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getExchangeCount());
+        });
+        Flight::route("/api/currency/getupdown", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->gettup());
+        });
+        Flight::route("/api/currency/getcharts", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getcharts());
+        });
+        Flight::route("/api/currency/getvol", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getvol());
+        });
+        Flight::route("/api/currency/getvolexchange", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getvolexchange());
+        });
+
+
+
 
 
     }

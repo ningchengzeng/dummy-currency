@@ -9,18 +9,18 @@
 namespace App\Config;
 
 use flight;
-use MongoDB\Client;
+use MongoClient;
 
 class Database {
     private $config = array(
-        "url" => 'mongodb://127.0.0.1/',
-        "database" => "local"
+        "url" => 'mongodb://127.0.0.1:27017',
+        "database" => "dummcy"
     );
 
     public function init(){
         Flight::map("db", function(){
-            $client = new Client($this->config["url"]);
-            return $client->selectDatabase($this->config["database"]);
+             $client = new MongoClient($this->config["url"]);
+            return $client->selectDB($this->config["database"]);
         });
     }
 }
