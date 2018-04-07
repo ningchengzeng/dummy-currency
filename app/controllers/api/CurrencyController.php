@@ -85,31 +85,96 @@ class CurrencyController extends Controller {
     }
 
     /**
-     * 交易平台
-     * @return mixed
+     * 概念行情
+     * @return array
      */
-    public function getExchange()
-    {
-        $pagesize = $_GET['pagesize'];
-        $page=$_GET['page'];
-        $collection= Flight::db()->Exchange;
+    public function getConcept(){
+        $collection= Flight::db()->Concept;
         ini_set('mongo.long_as_object', 1);
-        $col = $collection->find();
-//        $col->sort(['star' => 1]);
-        $col->skip(($page-1)*$pagesize);
-        $col->limit($pagesize);
 
+        $col = $collection->find();
         $result = array();
         foreach($col as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com", "themes", $document["icon"]);
-            $document["icon"] = str_replace("platimages", "coin", $document["icon"]);
-            //var_dump($document['icon']);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
             array_push($result,$document);
         }
         return $result;
     }
 
+    /**
+     * 概念行情内容
+     * @return array
+     */
+    public function getConceptCoin(){
+        $query = Flight::request()->query;
+        $collection = Flight::db()->Concept;
+        $collectionCoin = Flight::db()->Concept_Coin;
+
+        ini_set('mongo.long_as_object', 1);
+
+        $document = $collection->findOne(array("index"=> $query["index"]));
+        $colCon = $collectionCoin->find(array("index"=> $query["index"]));
+        $list = array();
+        foreach($colCon as $documentItem){
+            array_push($list, $documentItem);
+        }
+        return array(
+            "list"=> $list,
+            "desc" => $document
+        );
+    }
+
+    /**
+     * 交易平台
+     * @return mixed
+     */
+    public function getExchange() {
+        $pagesize = $_GET['pagesize'];
+        $page= $_GET['page'];
+
+        $collection = Flight::db()->Exchange;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->find();
+        $col->skip(($page-1) * $pagesize);
+        $col->limit($pagesize);
+
+        $result = array();
+        foreach($col as $document){
+            if(isset($document["icon"])){
+                $document["icon"] = str_replace("//static.feixiaohao.com", "themes", $document["icon"]);
+                $document["icon"] = str_replace("platimages", "coin", $document["icon"]);
+                $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+                array_push($result,$document);
+            }
+        }
+        return array(
+            "result" => $result,
+            "count" => $collection->count()
+        );
+    }
+
+    /**
+     * 月交易排行版
+     *
+     * @return array
+     */
+    public function getMonthMxchange(){
+        $collection = Flight::db()->Month_Exchange;
+        ini_set('mongo.long_as_object', 1);
+        $col = $collection->find();
+        $result = array();
+        $index = 1;
+        foreach($col as $document){
+            if(isset($document["icon"])){
+                $document['index'] = $index++;
+                $document["icon"] = str_replace("//static.feixiaohao.com", "themes", $document["icon"]);
+                $document["icon"] = str_replace("platimages", "coin", $document["icon"]);
+                $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+                array_push($result,$document);
+            }
+        }
+        return $result;
+    }
 
     public function gettup(){
         $col24up= Flight::db()->Currencies_Hour24_Up;
@@ -176,15 +241,6 @@ class CurrencyController extends Controller {
         array_push($result,$colwdownlist);
         return $result;
     }
-
-    public function getExchangeCount()
-    {
-        $collection= Flight::db()->Exchange;
-        ini_set('mongo.long_as_object', 1);
-        $col = $collection->find();
-        return $col->count();
-    }
-
 
     /**
      * 市值趋势

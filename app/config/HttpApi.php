@@ -57,13 +57,17 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->getNewCoin());
         });
+        Flight::route("/api/currency/getConcept", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getConcept());
+        });
+        Flight::route("/api/currency/getConceptCoin", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getConceptCoin());
+        });
         Flight::route("/api/currency/getExchange", function(){
             $currency = Flight::currency();
             Flight::json($currency->getExchange());
-        });
-        Flight::route("/api/currency/getExchangeCount", function(){
-            $currency = Flight::currency();
-            Flight::json($currency->getExchangeCount());
         });
         Flight::route("/api/currency/getupdown", function(){
             $currency = Flight::currency();
@@ -81,11 +85,10 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->getvolexchange());
         });
-
-
-
-
-
+        Flight::route("/api/currency/getMonthMxchange", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getMonthMxchange());
+        });
     }
 
 
