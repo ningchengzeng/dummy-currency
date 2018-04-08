@@ -93,6 +93,93 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->getMonthMxchange());
         });
+
+
+        Flight::register("mobile", "\App\Controllers\api\MobileController");
+        Flight::route("/mapi/mobile/currencyindexAll", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->indexAll());
+        });
+        Flight::route("/mapi/mobile/getCointradesPercent", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getCointradesPercent());
+        });
+        Flight::route("/mapi/mobile/getCoinhisdata", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getCoinhisdata());
+        });
+        Flight::route("/mapi/mobile/getCoinevent", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getCoinevent());
+        });
+        Flight::route("/mapi/mobile/getCoinrank", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getCoinrank());
+        });
+        Flight::route("/mapi/mobile/homenewcoin", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->homenewcoin());
+        });
+        Flight::route("/mapi/mobile/homevolrank", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->homevolrank());
+        });
+        Flight::route("/mapi/mobile/HomeCoinMaxChange", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->HomeCoinMaxChange());
+        });
+        Flight::route("/mapi/mobile/hotconcept", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->hotconcept());
+        });
+        Flight::route("/mapi/mobile/getCurrencies", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getCurrencies());
+        });
+        Flight::route("/mapi/mobile/getNewCoin", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getNewCoin());
+        });
+        Flight::route("/mapi/mobile/getExchange", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getExchange());
+        });
+        Flight::route("/mapi/mobile/getExchangeCount", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getExchangeCount());
+        });
+        Flight::route("/mapi/mobile/getupdown", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->gettup());
+        });
+        Flight::route("/mapi/mobile/getcharts", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getcharts());
+        });
+        Flight::route("/mapi/mobile/getvol", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getvol());
+        });
+        Flight::route("/mapi/mobile/getvolexchange", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getvolexchange());
+        });
+        Flight::route("/mapi/mobile/mhotconcept", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getmhotconcept());
+        });
+        Flight::route("/mapi/mobile/monthmxchange", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getMonthMxchange());
+        });
+        Flight::route("/mapi/mobile/mexchange", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getmExchange());
+        });
+        Flight::route("/mapi/mobile/gbi", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getGbi());
+        });
     }
 
 
