@@ -64,8 +64,23 @@ class CurrencyController extends Controller {
         $currency = $_GET['currency'];
         $query = array("code"=>$currency);
         $collection= Flight::db()->Currencies;
+        $collectionExchange = Flight::db()->Exchange_Price;
+
         ini_set('mongo.long_as_object', 1);
-        return $collection->findOne($query);
+        $colExchange = $collectionExchange->find(array('coinCode'=>$currency));
+        $exchangeList = array();
+        foreach ($colExchange as $item){
+            $item["exchangeIcon"] = str_replace("//static.feixiaohao.com","themes", $item["exchangeIcon"]);
+            $item["exchangeIcon"] = str_replace("platimages/","", $item["exchangeIcon"]);
+            $item["exchangeIcon"] = preg_replace("#/\d{8}/#", "/coin/time/", $item["exchangeIcon"]);
+
+            array_push($exchangeList, $item);
+        }
+
+        return array(
+            "detail" => $collection->findOne($query),
+            "exchange" => $exchangeList
+        );
     }
 
     /**
@@ -151,6 +166,45 @@ class CurrencyController extends Controller {
             "result" => $result,
             "count" => $collection->count()
         );
+    }
+
+    /**
+     * 交易所详情
+     * @return array
+     */
+    public function getExchangeDetail(){
+        $query = Flight::request()->query;
+
+        $collection = Flight::db()->Exchange;
+        $collectionExchange = Flight::db()->Exchange_Price;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->findOne(array("code" => $query["currenty"]));
+        $colResult = $collectionExchange->find(array("exchangeCode"=> $query["currenty"]));
+
+        $col["icon"] = str_replace("//static.feixiaohao.com", "themes", $col["icon"]);
+        $col["icon"] = str_replace("platimages", "coin", $col["icon"]);
+        $col["icon"] = preg_replace("#/\d{8}/#", "/time/", $col["icon"]);
+
+        $result = array();
+        foreach($colResult as $document){
+            if(isset($document["coinIcon"])){
+
+                $document["exchangeIcon"] = str_replace("//static.feixiaohao.com", "themes", $document["exchangeIcon"]);
+                $document["exchangeIcon"] = str_replace("platimages", "coin", $document["exchangeIcon"]);
+                $document["exchangeIcon"] = preg_replace("#/\d{8}/#", "/time/", $document["exchangeIcon"]);
+
+
+                $document["coinIcon"] = str_replace("//static.feixiaohao.com","themes", $document["coinIcon"]);
+                $document["coinIcon"] = preg_replace("#/\d{8}/#", "/time/", $document["coinIcon"]);
+                array_push($result, $document);
+            }
+        }
+        return array(
+            "coin" => $result,
+            "detail" => $col
+        );
+
     }
 
     /**
@@ -407,9 +461,6 @@ class CurrencyController extends Controller {
         return curl_exec($ch);
 
     }
-
-
-
 
     /***
      *最新上市
