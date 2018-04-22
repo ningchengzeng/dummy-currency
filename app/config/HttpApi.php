@@ -56,18 +56,32 @@ class HttpApi {
             else{
                 $captcha = Utils::generate_code();
                 $smsCol = $sms->findOne(array("telno"=> $telno));
-                if($smsCol==null){
-                    $document = array(
-                        "telno" => $telno,
-                        "captcha" => $captcha,
-                        "ts" => time()
-                    );
-                    $sms->insert($document);
-                }
-                else if($col["ts"] < (time() - 1000 * 60 * 3)){
+                if($col["ts"] > (time() - 60 * 3)){
                     $result = "2";
-                }
-                else{
+                }else{
+                    $code = Utils::sendSmsCode($captcha, $telno);
+                    if($code == 0 ){
+                        if($smsCol == null){
+                            $document = array(
+                                "telno" => $telno,
+                                "captcha" => $captcha,
+                                "ts" => time()
+                            );
+                            $sms->insert($document);
+                        }
+                        else{
+                            $document = array(
+                                "telno" => $telno,
+                                "captcha" => $captcha,
+                                "ts" => time()
+                            );
+                            $sms->update(array("telno" => $telno), $document);
+                        }
+
+                        $result = "1";
+                    }else{
+                        $result = "0";
+                    }
                 }
             }
             Flight::json(array("result"=> $result));

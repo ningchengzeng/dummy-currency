@@ -6,7 +6,12 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Yunpian\\Sdk\\' => array($vendorDir . '/yunpian/yunpian-php-sdk/src'),
+    'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src'),
     'MongoDB\\' => array($vendorDir . '/mongodb/mongodb/src'),
+    'GuzzleHttp\\Psr7\\' => array($vendorDir . '/guzzlehttp/psr7/src'),
+    'GuzzleHttp\\Promise\\' => array($vendorDir . '/guzzlehttp/promises/src'),
+    'GuzzleHttp\\' => array($vendorDir . '/guzzlehttp/guzzle/src'),
     'App\\Controllers\\Api\\' => array($baseDir . '/app/controllers/api'),
     'App\\Controllers\\Admin\\' => array($baseDir . '/app/controllers/admin'),
     'App\\Controllers\\' => array($baseDir . '/app/controllers'),
