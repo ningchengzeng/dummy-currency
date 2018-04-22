@@ -60,8 +60,11 @@ class HttpApi {
                     $result = "2";
                 }else{
                     $code = Utils::sendSmsCode($captcha, $telno);
-                    if($code == 0 ){
-                        if($smsCol == null){
+                    if($code){
+                        if($smsCol != null){
+                            $sms->remove(array("telno" => $telno));
+                        }
+                        else if($smsCol == null){
                             $document = array(
                                 "telno" => $telno,
                                 "captcha" => $captcha,
@@ -69,17 +72,9 @@ class HttpApi {
                             );
                             $sms->insert($document);
                         }
-                        else{
-                            $document = array(
-                                "telno" => $telno,
-                                "captcha" => $captcha,
-                                "ts" => time()
-                            );
-                            $sms->update(array("telno" => $telno), $document);
-                        }
-
                         $result = "1";
-                    }else{
+                    }
+                    else{
                         $result = "0";
                     }
                 }
