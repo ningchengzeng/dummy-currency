@@ -20,9 +20,15 @@ require_once __DIR__ . "/vendor/autoload.php";
 
 use App\Config\HttpApi;
 use App\Config\HttpAdmin;
+use App\Config\HttpImage;
+
+Flight::set('flight.views.path', __DIR__.'/views');
 
 $database = new App\Config\Database();
 $database->init();
+
+$httpImage = new HttpImage();
+$httpImage->init();
 
 $httpApi = new HttpApi();
 $httpApi->init();

@@ -9,13 +9,340 @@
 namespace App\Config;
 
 use flight;
+use MongoDB;
 
 class HttpApi {
     public function init(){
+        /**
+         * 获取账户信息
+         */
+        Flight::route("/user/getUserInfo", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $user = Flight::db()->User;
+            ini_set('mongo.long_as_object', 1);
+            $col = $user->findOne(array("userid" => $psession));
+            $userid = "";
+            $username = "";
+
+            if($col != null){
+                $userid = $col["userid"] . "";
+                $username = $col["username"];
+            }
+
+            Flight::json(array(
+                "status"=>"success",
+                "userid"=> $userid,
+                "username" => Utils::hidtel($username)
+            ));
+        });
+
+        /**
+         * 获取注册时的验证码
+         */
+        Flight::route("/user/GetSms", function(){
+            $query = Flight::request()->query;
+            $telno = $query["telno"];
+
+            $user = Flight::db()->User;
+            $sms = Flight::db()->Sms;
+            ini_set('mongo.long_as_object', 1);
+
+            $col = $user->findOne(array("userid"=> $telno));
+            $result = "1";
+            if($col != null){
+                $result = "3";
+            }
+            else{
+                $captcha = Utils::generate_code();
+                $smsCol = $sms->findOne(array("telno"=> $telno));
+                if($smsCol==null){
+                    $document = array(
+                        "telno" => $telno,
+                        "captcha" => $captcha,
+                        "ts" => time()
+                    );
+                    $sms->insert($document);
+                }
+                else if($col["ts"] < (time() - 1000 * 60 * 3)){
+                    $result = "2";
+                }
+                else{
+                }
+            }
+            Flight::json(array("result"=> $result));
+        });
+        /**
+         * 注册账户
+         */
+        Flight::route("POST /user/register", function(){
+            $data = Flight::request()->data;
+            $user = Flight::db()->User;
+            $sms = Flight::db()->Sms;
+
+            ini_set('mongo.long_as_object', 1);
+
+            $telno = $data["userid"];
+            $col = $user->findOne(array("userid"=> $telno));
+
+            if($col != null){
+                Flight::json(array(
+                    "content" => "账户已经存在！",
+                    "status" => "error"
+                ));
+                return;
+            }
+
+            $password = $data["password"];
+            $confirmPwd = $data["confirmPwd"];
+            if($password != $confirmPwd){
+                Flight::json(array(
+                    "content" => "确认密码错误！",
+                    "status" => "error"
+                ));
+                return;
+            }
+
+            $smsCol = $sms->findOne(array("telno"=> $telno));
+            if($smsCol == null){
+                Flight::json(array(
+                    "content" => "请输入验证码！",
+                    "status" => "error"
+                ));
+                return;
+            }
+
+            if($smsCol["captcha"] != $data["verifyCode"]){
+                Flight::json(array(
+                    "content" => "验证码不正确！",
+                    "status" => "error"
+                ));
+                return;
+            }
+
+            $document = array(
+                "userid" => uniqid(),
+                "username" => $data["userid"],
+                "password" => md5($data["password"]),
+                "ts" => time()
+            );
+            $user->insert($document);
+            Flight::json(array(
+                "status" => "success"
+            ));
+        });
+        /**
+         * 账户登录
+         */
+        Flight::route("POST /user/login", function(){
+            $data = Flight::request()->data;
+            $user = Flight::db()->User;
+            $userid = $data["userid"];
+            $password = $data["password"];
+
+            $col = $user->findOne(array("username"=> $userid));
+            if($col == null){
+                Flight::json(array(
+                    "content" => "账户或密码错误！",
+                    "status" => "error"
+                ));
+                return;
+            }
+            if($col["password"] != md5($password)){
+                Flight::json(array(
+                    "content" => "账户或密码错误！",
+                    "status" => "error"
+                ));
+                return;
+            }
+
+            Flight::json(array(
+                "status" => "success",
+                "content" => $col["userid"] . "",
+            ));
+        });
+        /**
+         * 关注数据
+         */
+        Flight::route("POST /user/addfocus", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $currencyCode = $request->data["currency"];
+
+            $user = Flight::db()->User;
+            $currency = Flight::db()->Currencies;
+            $currencyPrice = Flight::db()->Currencies_Price;
+            $userCurrency = Flight::db()->User_Currencies;
+            ini_set('mongo.long_as_object', 1);
+
+            $colUser = $user->findOne(array("userid" => $psession));
+            $currencyCount = $currency->count(array("code" => $currencyCode));
+            $currencyDocument = $currencyPrice->findOne(array("code" => $currencyCode));
+
+            if($currencyCount == 0){
+                Flight::json(array(
+                    "status" => "error",
+                    "code" => "1",
+                    "context" => "关注货币不存在！"
+                ));
+                return;
+            }
+
+            if($colUser == null){
+                Flight::json(array(
+                    "status" => "error",
+                    "code" => "2",
+                    "context" => "请重新登录后，在进行关注！"
+                ));
+                return;
+            }
+
+            $userCurrencyCount = $userCurrency->count(array("userid"=>$psession, "currency"=> $currencyCode));
+            if($userCurrencyCount == 0){
+                $currencyDocument["userid"] = $psession;
+
+                $userCurrency->insert($currencyDocument);
+                Flight::json(array(
+                    "status" => "success",
+                    "context" => "关注成功！"
+                ));
+                return;
+            }else{
+                Flight::json(array(
+                    "status" => "success",
+                    "context" => "已经被关注！"
+                ));
+                return;
+            }
+        });
+
+        /**
+         * 关注列表
+         */
+        Flight::route("POST /user/currency", function(){
+            $pageData = Flight::request()->data;
+            $pageSize = $pageData["pageSize"];
+            $page = $pageData["page"];
+
+            $type = $pageData["type"];
+            $limit = $pageData["limit"];
+            $psession = $pageData["psession"];
+
+            $price = $pageData["price"];
+
+            $collection = Flight::db()->User_Currencies;
+            ini_set('mongo.long_as_object', 1);
+            $col = null;
+            $count = 0;
+            if($type == null){
+                $col = $collection->find(array("userid" => $psession))->sort(array("volume.usd"=>-1));
+                $col->limit($pageSize);
+                $col->skip(($page-1) * $pageSize);
+                $count = $collection->count(array("userid" => $psession));
+            }
+            else if($type=="token"){
+                $col = $collection->find(array("assets"=>true,"userid" => $psession))->sort(array("volume.usd"=>-1));
+                if($limit=="true"){
+                    $col->limit(100);
+                    $count = 100;
+                }
+                else {
+                    if($price == "true"){
+                        $col->sort(array("marketCap.usd"=> -1));
+                    }
+
+                    $col->limit($pageSize);
+                    $col->skip(($page-1) * $pageSize);
+                    $count = $collection->count(array("assets"=>true,"userid" => $psession));
+                }
+            }
+            else if($type=="dummcy"){
+                $col = $collection->find(
+                    array(
+                        "\$or"=> array(
+                            array("assets"=>false),
+                            array("assets"=> array("\$exists"=> false))
+                        ),
+                        "userid" => $psession
+                    )
+                )->sort(array("volume.usd"=>-1));
+                if($limit=="true"){
+                    $col->limit(100);
+                    $count = 100;
+                }
+                else {
+                    if($price == "true"){
+                        $col->sort(array("marketCap.usd"=> -1));
+                    }
+
+                    $col->limit($pageSize);
+                    $col->skip(($page-1) * $pageSize);
+
+                    $count = $collection->count(array(
+                        "\$or"=> array(
+                            array("assets"=>false),
+                            array("assets"=> array("\$exists"=> false))
+                        ),"userid" => $psession
+
+                    ));
+                }
+            }
+
+            $result = array();
+            $index = 1;
+            if($col!=null){
+                foreach($col as $document){
+                    $document["icon"] = Utils::purl($document["icon"]);
+                    $document["index"] = $index + ($page-1) * $pageSize;
+                    $index ++;
+                    array_push($result, $document);
+                }
+            }
+            Flight::json(array(
+                "result" => $result,
+                "count" => $count
+            ));
+        });
+
+        Flight::route("POST /user/unfocus", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $currencyCode = $request->data["currency"];
+
+            $collection = Flight::db()->User_Currencies;
+            ini_set('mongo.long_as_object', 1);
+            $userCurrencyCount = $collection->count(array("userid"=>$psession, "currency"=> $currencyCode));
+            if($userCurrencyCount == 0){
+                $collection->remove(array("userid"=>$psession, "code"=> $currencyCode));
+                Flight::json(array(
+                    "status" => "success",
+                    "context" => "取消关注成功！"
+                ));
+                return;
+            }else{
+                Flight::json(array(
+                    "status" => "error",
+                    "context" => "取消关注失败！"
+                ));
+                return;
+            }
+        });
+
         Flight::register("currency", "\App\Controllers\api\CurrencyController");
         Flight::route("/api/currency/indexAll", function(){
             $currency = Flight::currency();
             Flight::json($currency->indexAll());
+        });
+        Flight::route("GET /api/currency/exportIndex", function (){
+            Flight::currency()->exportIndex();
+        });
+        Flight::route("/api/currency/notes", function (){
+            $currency = Flight::currency();
+            Flight::json($currency->getNotes());
+        });
+        Flight::route("/api/currency/getICO", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getICO());
         });
         Flight::route("/api/currency/getCointradesPercent", function(){
             $currency = Flight::currency();
@@ -92,6 +419,22 @@ class HttpApi {
         Flight::route("/api/currency/getMonthMxchange", function(){
             $currency = Flight::currency();
             Flight::json($currency->getMonthMxchange());
+        });
+        Flight::route("/api/currency/loadnotes", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->getloadnotes());
+        });
+        Flight::route("/api/currency/loadhander", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->loadhander());
+        });
+        Flight::route("/api/currency/hostconceptList", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->hostconceptList());
+        });
+        Flight::route("/api/currency/showmarket", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->showmarket());
         });
 
 

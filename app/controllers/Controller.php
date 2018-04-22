@@ -13,4 +13,9 @@ class Controller{
 
     public function __construct() {
     }
+
+    public function purl($path){
+        $replace = 'http://'.$_SERVER['HTTP_HOST'].':'.$_SERVER["SERVER_PORT"]."/image/";
+        return str_replace("//static.feixiaohao.com", $replace, $path);
+    }
 }
