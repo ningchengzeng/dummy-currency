@@ -532,6 +532,11 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->getGbi());
         });
+        Flight::route("/mapi/mobile/getico", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getICO());
+        });
+
     }
 
 
