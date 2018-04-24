@@ -11,6 +11,7 @@ namespace App\Controllers\Api;
 use App\Config\Database;
 use App\Controllers\Controller;
 use flight;
+use MongoDB\BSON\Regex;
 
 class MobileController extends Controller {
 
@@ -21,55 +22,136 @@ class MobileController extends Controller {
      * @return array
      *
      */
+    /**
+     * @return array
+     *
+     */
     public function indexAll() {
         $request = Flight::request();
         $pageData = $request->query;
         $pageSize = $pageData["pageSize"];
         $page = $pageData["page"];
 
-        $keyword = $pageData["keyword"];
-        $sort = $pageData["sort"];
+        $type = $pageData["type"];
+        $limit = $pageData["limit"];
+        $price = $pageData["price"];
 
         $collection = Flight::db()->Currencies_Price;
-
         ini_set('mongo.long_as_object', 1);
 
-        $col = $collection->find();
-        $col->limit($pageSize);
-        $col->skip(($page-1) * $pageSize);
+        $col = null;
+        $count = 0;
+        if($type == null){
+            $col = $collection->find()->sort(array("volume.usd"=>-1));
+            $col->limit($pageSize);
+            $col->skip(($page-1) * $pageSize);
+            $count = $collection->count();
+        }
+        else if($type=="token"){
+            $col = $collection->find(array("assets"=>true))->sort(array("volume.usd"=>-1));
+            if($limit=="true"){
+                $col->limit(100);
+                $count = 100;
+            }
+            else {
+                if($price == "true"){
+                    $col->sort(array("marketCap.usd"=> -1));
+                }
+
+                $col->limit($pageSize);
+                $col->skip(($page-1) * $pageSize);
+                $count = $collection->count(array("assets"=>true));
+            }
+        }
+        else if($type=="dummcy"){
+            $col = $collection->find(
+                array(
+                    "\$or"=> array(
+                        array("assets"=>false),
+                        array("assets"=> array("\$exists"=> false))
+                    )
+                )
+            )->sort(array("volume.usd"=>-1));
+            if($limit=="true"){
+                $col->limit(100);
+                $count = 100;
+            }
+            else {
+                if($price == "true"){
+                    $col->sort(array("marketCap.usd"=> -1));
+                }
+
+                $col->limit($pageSize);
+                $col->skip(($page-1) * $pageSize);
+
+                $count = $collection->count(array(
+                    "\$or"=> array(
+                        array("assets"=>false),
+                        array("assets"=> array("\$exists"=> false))
+                    )
+                ));
+            }
+        }
 
         $result = array();
 
         $index = 1;
-        foreach($col as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes", $document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
-            $document["index"] = $index + ($page-1) * $pageSize;
-            $index ++;
-            array_push($result, $document);
+        if($col!=null){
+            foreach($col as $document){
+                $document["icon"] = $this->purl($document["icon"]);
+                $document["index"] = $index + ($page-1) * $pageSize;
+                $index ++;
+                array_push($result, $document);
+            }
         }
+
 
         return array(
             "result" => $result,
-            "count" => $collection->count()
+            "count" => $count
         );
     }
 
+    public function indexHeader(){
+        $collection = Flight::db()->Global;
+        ini_set('mongo.long_as_object', 1);
+        $col = $collection->findOne();
+        return array("result"=>$col);
+    }
+
+    public function search(){
+        $query = Flight::request()->query;
+        $search = $query["search"];
+
+        $collection = Flight::db()->Currencies_Price;
+        $collectionExchange = Flight::db()->Exchange;
+        ini_set('mongo.long_as_object', 1);
+        $col = $collection->find(array("title"=> new Regex($search, "i")))->sort(array("volume.usd"=>-1))->limit(20);;
+        $colExchange = $collectionExchange->find(array("title"=> new Regex($search,"i")))->limit(20);
+
+        $result = array();
+        foreach($col as $document){
+            $document["icon"] = $this->purl($document["icon"]);
+            array_push($result,$document);
+        }
+
+        $resultExchange = array();
+        foreach($colExchange as $document){
+            $document["icon"] = $this->purl($document["icon"]);
+            array_push($resultExchange, $document);
+        }
+
+        return array(
+            "currencies"=> $result,
+            "exchange" => $resultExchange
+        );
+    }
 
     /**
      * 获取详情页数据查询mongo数据
      * @return mixed
      */
-    public function getCurrencies()
-    {
-//        $currency = $_GET['currency'];
-//        $query = array("code"=>$currency);
-//        $collection= Flight::db()->Currencies;
-//        ini_set('mongo.long_as_object', 1);
-//        $result = $collection->findOne($query);
-//        $result['icon']=str_replace("//static.feixiaohao.com/coin/", "themes/coin/mid/", $result["icon"]);
-//        return $result;
-
+    public function getCurrencies(){
         $data = Flight::request()->data;
         $currency = $data['currency'];
         $psession = $data["psession"];
@@ -91,6 +173,9 @@ class MobileController extends Controller {
             $item["exchangeIcon"] = $this->purl($item["exchangeIcon"]);
             array_push($exchangeList, $item);
         }
+
+        $detail = $collection->findOne($query);
+        $detail["icon"] = $this->purl($detail["icon"]);
 
         return array(
             "detail" => $collection->findOne($query),
@@ -123,8 +208,7 @@ class MobileController extends Controller {
         $col = $collection->find();
         $result = array();
         foreach($col as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com", "themes", $document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($result,$document);
         }
         return $result;
@@ -147,10 +231,7 @@ class MobileController extends Controller {
 
         $result = array();
         foreach($col as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com", "themes", $document["icon"]);
-            $document["icon"] = str_replace("platimages", "coin", $document["icon"]);
-            //var_dump($document['icon']);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($result,$document);
         }
         return $result;
@@ -184,33 +265,27 @@ class MobileController extends Controller {
 
         $result = array();
         foreach($col1 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($col24uplist,$document);
         }
         foreach($col2 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($col24downlist,$document);
         }
         foreach($col3 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($coluplist,$document);
         }
         foreach($col4 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($coldownlist,$document);
         }
         foreach($col5 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($colwuplist,$document);
         }
         foreach($col6 as $document){
-            $document["icon"] = str_replace("//static.feixiaohao.com","themes",$document["icon"]);
-            $document["icon"] = preg_replace("#/\d{8}/#", "/time/", $document["icon"]);
+            $document["icon"] = $this->purl($document["icon"]);
             array_push($colwdownlist,$document);
         }
 
@@ -260,7 +335,6 @@ class MobileController extends Controller {
         $result = curl_exec($ch);
         $result = str_replace("/currencies/","currencies.html?currency=",$result);
         $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
-        //static.feixiaohao.com/coin/eced1e28da4f16e117f471b08ad6e_mid.png
         $result = str_replace("//static.feixiaohao.com/coin/","themes/coin/mid/",$result);
         return $result;
     }
@@ -403,17 +477,6 @@ class MobileController extends Controller {
      * @return mixed
      */
     public function HomeCoinMaxChange(){
-//        $url = 'api.feixiaohao.com/coins/HomeCoinMaxChange/';
-//        $ch = curl_init();
-//        curl_setopt($ch, CURLOPT_URL, $url);
-//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html; charset=utf-8"));
-//        $result = curl_exec($ch);
-//        $result = str_replace("//static.feixiaohao.com","themes",$result);
-//        $result = preg_replace("#/\d{8}/#", "/time/", $result);
-//        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-//        return json_decode($result);
-
         $colup= Flight::db()->Currencies_Hour_Up;
         $col24up= Flight::db()->Currencies_Hour24_Up;
         $colwup= Flight::db()->Currencies_Week_Up;
@@ -624,10 +687,7 @@ class MobileController extends Controller {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
         return curl_exec($ch);
-
     }
-
-
 
 
     /***
@@ -680,8 +740,6 @@ class MobileController extends Controller {
         return $thead. "<tbody>$trs</tbody>";
     }
 
-
-
     public function getmhotconcept()
     {
         $conceptid = $_GET["conceptid"];
@@ -690,8 +748,7 @@ class MobileController extends Controller {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $result = curl_exec($ch);
-        $result = str_replace("//static.feixiaohao.com","themes",$result);
-        $result = preg_replace("#/\d{8}/#", "/time/", $result);
+        $result = $this->purl($result);
         $result = str_replace("/currencies/","currencies.html?currency=",$result);
         return json_decode($result);
     }
@@ -705,10 +762,7 @@ class MobileController extends Controller {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $result = curl_exec($ch);
-        $result = str_replace("//static.feixiaohao.com","themes",$result);
-        $result = preg_replace("#/\d{8}/#", "/time/", $result);
-        $result = str_replace("platimages", "coin", $result);
-        $result = str_replace("png", "png.jpg", $result);
+        $result = $this->purl($result);
         $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
 
         return json_decode($result);
@@ -722,7 +776,6 @@ class MobileController extends Controller {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         return json_decode(curl_exec($ch));
-
     }
 
 }

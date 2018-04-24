@@ -48,7 +48,7 @@ class HttpApi {
             $sms = Flight::db()->Sms;
             ini_set('mongo.long_as_object', 1);
 
-            $col = $user->findOne(array("userid"=> $telno));
+            $col = $user->findOne(array("username"=> $telno));
             $result = "1";
             if($col != null){
                 $result = "3";
@@ -64,14 +64,12 @@ class HttpApi {
                         if($smsCol != null){
                             $sms->remove(array("telno" => $telno));
                         }
-                        else if($smsCol == null){
-                            $document = array(
-                                "telno" => $telno,
-                                "captcha" => $captcha,
-                                "ts" => time()
-                            );
-                            $sms->insert($document);
-                        }
+                        $document = array(
+                            "telno" => $telno,
+                            "captcha" => $captcha,
+                            "ts" => time()
+                        );
+                        $sms->insert($document);
                         $result = "1";
                     }
                     else{
@@ -92,7 +90,7 @@ class HttpApi {
             ini_set('mongo.long_as_object', 1);
 
             $telno = $data["userid"];
-            $col = $user->findOne(array("userid"=> $telno));
+            $col = $user->findOne(array("username"=> $telno));
 
             if($col != null){
                 Flight::json(array(
@@ -452,6 +450,15 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->indexAll());
         });
+        Flight::route("/mapi/mobile/indexHeader", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->indexHeader());
+        });
+        Flight::route("/mapi/mobile/search", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->search());
+        });
+
         Flight::route("/mapi/mobile/getCointradesPercent", function(){
             $currency = Flight::mobile();
             Flight::json($currency->getCointradesPercent());
