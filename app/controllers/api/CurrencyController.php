@@ -1020,7 +1020,7 @@ class CurrencyController extends Controller {
                 "<tr>
                     <td>
                         <a href=\"/currencies/currencies.html?=$code/\" target=\"_blank\">
-                            <img src=\"$icon\" alt=\"$title\">$$title_short
+                            <img src=\"$icon\" alt=\"$title\">$title_short
                         </a>
                     </td>
                     <td>$price</td>
