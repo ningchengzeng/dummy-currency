@@ -38,6 +38,109 @@ class HttpApi {
         });
 
         /**
+         * 获取账户详细信息
+         */
+        Flight::route("/user/main/userInfo", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $user = Flight::db()->User;
+            ini_set('mongo.long_as_object', 1);
+            $col = $user->findOne(array("userid" => $psession));
+
+            if($col != null){
+                $userid = $col["userid"] . "";
+                $username = $col["username"];
+                if(array_key_exists("usernick", $col)){
+                    $usernick = $col['usernick'];
+                }else{
+                    $usernick = Utils::hidtel($username);
+                }
+
+                Flight::json(array(
+                    "status"=>"success",
+                    "userid"=> $userid,
+                    "usernick" => $usernick,
+                    "username" => $username,
+                    "time" => date("Y年m月d日", $col['ts']->value)
+                ));
+            }
+            else{
+                Flight::json(array(
+                    "status"=> "error"
+                ));
+            }
+        });
+
+        /**
+         * 修改昵称
+         */
+        Flight::route("/user/main/usernick", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $usernick = $request->data["usernick"];
+            $user = Flight::db()->User;
+            ini_set('mongo.long_as_object', 1);
+
+            $user->update(array("userid" => $psession),
+                array("\$set"=>array(
+                    "usernick" => $usernick
+                )));
+
+            Flight::json(array(
+                "status"=>"success"
+            ));
+        });
+
+        Flight::route("/user/main/modifypassword", function(){
+            $request = Flight::request();
+            $psession = $request->data["psession"];
+            $passowrd = $request->data["password"];
+            $user = Flight::db()->User;
+            ini_set('mongo.long_as_object', 1);
+
+            $col = $user->findOne(array("userid" => $psession));
+            if($col != null){
+                $oldpassword = $col['password'];
+                if(md5($passowrd["old"]) != $oldpassword){
+                    Flight::json(array(
+                        "content" => "旧密码不正确！",
+                        "status" => "error"
+                    ));
+                    return;
+                }
+
+                if($passowrd["new1"] != $passowrd["new2"]){
+                    Flight::json(array(
+                        "content" => "两次密码不相同！",
+                        "status" => "error"
+                    ));
+                    return;
+                }
+
+                if($passowrd["old"] == $passowrd["new1"]){
+                    Flight::json(array(
+                        "content" => "旧密码和新密码相同,无法修改！",
+                        "status" => "error"
+                    ));
+                    return;
+                }
+
+                $user->update(array("userid" => $psession), array("\$set"=>array(
+                    "password" => md5($passowrd["new1"])
+                )));
+                Flight::json(array(
+                    "status" => "success"
+                ));
+            }
+            else{
+                Flight::json(array(
+                    "content" => "账户不存在或者没有登录！",
+                    "status"=> "error"
+                ));
+            }
+        });
+
+        /**
          * 获取注册时的验证码
          */
         Flight::route("/user/GetSms", function(){
@@ -310,7 +413,6 @@ class HttpApi {
                 "count" => $count
             ));
         });
-
         Flight::route("POST /user/unfocus", function(){
             $request = Flight::request();
             $psession = $request->data["psession"];
@@ -333,6 +435,15 @@ class HttpApi {
                 ));
                 return;
             }
+        });
+
+        /**
+         * 获取汇率信息
+         */
+        Flight::route("public/currency", function(){
+            $request = Flight::request();
+            $currency = Flight::db()->Currency;
+            ini_set('mongo.long_as_object', 1);
         });
 
         Flight::register("currency", "\App\Controllers\api\CurrencyController");

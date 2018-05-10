@@ -33,7 +33,7 @@ class CurrencyController extends Controller {
                     </div>
                     <div class=\"rightSise loginbar\">
                         <div class=\"userLinks userinfo\" style=\"display: none\">
-                            <a class=\"username\" href=\"userticker.html\"></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+                            <a class=\"username\" href=\"setting.html\"></a>&nbsp;&nbsp;|&nbsp;&nbsp;
                             <a rel=\"nofollow\" onclick=\"javascript: logout(); return false; \">退出</a>
                         </div>&nbsp;&nbsp;
                         <div class=\"userLinks unlogin\" style=\"display: none\">
@@ -75,7 +75,7 @@ class CurrencyController extends Controller {
         $col = null;
         $count = 0;
         if($type == null){
-            $col = $collection->find()->sort(array("volume.usd"=>-1));
+            $col = $collection->find()->sort(array("marketCap.usd"=>-1));
             $col->limit($pageSize);
             $col->skip(($page-1) * $pageSize);
             $count = $collection->count();
@@ -161,7 +161,7 @@ class CurrencyController extends Controller {
             $col = $collection->find()->sort(array("volume.usd"=>-1));
         }
         else if($type=="token"){
-            $col = $collection->find(array("assets"=>true))->sort(array("volume.usd"=>-1));
+            $col = $collection->find(array("assets"=>true))->sort(array("marketCap.usd"=>-1));
         }
         else if($type=="dummcy"){
             $col = $collection->find(
