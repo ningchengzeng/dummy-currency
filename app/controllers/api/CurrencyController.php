@@ -158,10 +158,10 @@ class CurrencyController extends Controller {
 
         $col = null;
         if($type == null){
-            $col = $collection->find()->sort(array("volume.usd"=>-1));
+            $col = $collection->find()->sort(array("marketCap.usd"=>-1));
         }
         else if($type=="token"){
-            $col = $collection->find(array("assets"=>true))->sort(array("marketCap.usd"=>-1));
+            $col = $collection->find(array("assets"=>true))->sort(array("volume.usd"=>-1));
         }
         else if($type=="dummcy"){
             $col = $collection->find(
@@ -613,7 +613,11 @@ class CurrencyController extends Controller {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        return curl_exec($ch);
+        $data = curl_exec($ch);
+
+        $data = preg_replace("/\/currencies\/([\w\d]*)\//i","currencies.html?currency=$1", $data);
+        $data = preg_replace("/\/exchange\/([\w\d]*)\//i","exchangedetails.html?currenty=$1",$data);
+        return $data;
     }
 
     /***
