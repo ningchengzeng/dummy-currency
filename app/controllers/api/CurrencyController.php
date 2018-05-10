@@ -909,9 +909,9 @@ class CurrencyController extends Controller {
 
             $trs = "$trs<tr>
                 <td>
-                    <a href=\"currencies.html?currency=".$document["code"]."/\" target=\"_blank\" title=\"".$document["title"]["cn"]."\">
+                    <a href=\"currencies.html?currency=".$document["code"]."/\" target=\"_blank\" title=\"".$document["title"]["en"] . $document["title"]["cn"]."\">
                     <img src=\"".$icon."\">
-                        ".$document["title"]["cn"]."
+                        ". $document["title"]["en"] . $document["title"]["cn"]."
                     </a>
                 </td>
                 <td>￥".$document["price"]["cny"]."</td>
