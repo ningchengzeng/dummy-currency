@@ -224,6 +224,7 @@ class CurrencyController extends Controller {
         $result = array();
         foreach($col as $document){
             $document["exchange"]["icon"] = $this->purl($document["exchange"]["icon"]);
+            $document["time"] = $document["time"]->toDateTime()->format('Y-m-d h:i');
             $index ++;
             array_push($result, $document);
         }
@@ -536,7 +537,7 @@ class CurrencyController extends Controller {
                         <span class=\"tit\">
                                 <img src=\"".$icon."\" alt=\"".$document["exchange"]["title"]."\">
                             ".$document["title"]."
-                        </span><span class=\"time\">".$document["time"]."</span>
+                        </span><span class=\"time\">".$document["time"]->toDateTime()->format('Y-m-d h:i')."</span>
                     </a>
                 </li>";
             }else{
@@ -545,7 +546,7 @@ class CurrencyController extends Controller {
                         <span class=\"tit\">
                                 <img src=\"".$icon."\" alt=\"".$document["exchange"]["title"]."\">
                             ".$document["title"]."
-                        </span><span class=\"time\">".$document["time"]."</span>
+                        </span><span class=\"time\">".$document["time"]->toDateTime()->format('Y-m-d h:i')."</span>
                     </a>
                 </li>";
             }
