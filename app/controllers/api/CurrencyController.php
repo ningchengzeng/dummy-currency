@@ -216,7 +216,7 @@ class CurrencyController extends Controller {
         $notice = Flight::db()->Notice;
         ini_set('mongo.long_as_object', 1);
 
-        $col = $notice->find();
+        $col = $notice->find()->sort(array("time" => -1));
         $col->limit($pageSize);
         $col->skip(($page-1) * $pageSize);
 
@@ -523,7 +523,7 @@ class CurrencyController extends Controller {
         $notice = Flight::db()->Notice;
         ini_set('mongo.long_as_object', 1);
 
-        $col = $notice->find()->limit(10);
+        $col = $notice->find()->sort(array("time" => -1))->limit(10);
         $index = 0;
         $result1 = "";
         $result2 = "";
@@ -591,14 +591,39 @@ class CurrencyController extends Controller {
      */
     public function getvol(){
         $num = $_GET['page'];
-        $url = 'api.feixiaohao.com/currencies/volrank/'.$num.'/';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        $result = curl_exec($ch);
-        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+
+        $currencies = Flight::db()->Currencies_Price;
+        $exchangePrice = Flight::db()->Exchange_Price;
+        ini_set('mongo.long_as_object', 1);
+        $currenciesCol = $currencies->find()->sort(array("marketCap.usd" => -1))->skip((($num-1) * 5))->limit(5);
+
+        $index = 1;
+        $result = array();
+        foreach ($currenciesCol as $document){
+            $itemData = array();
+
+            if(isset($document["icon"])){
+                $document['index'] = (($num-1) * 5) + $index++;
+                $document["icon"] = $this->purl($document["icon"]);
+            }
+
+            $exchangeCodes = $exchangePrice->find(array("coinCode"=> $document["code"]))->sort(array("volume.usd"=> -1))->limit(10);
+
+            $exchangeResults = array();
+            $indexExchange = 1;
+            foreach ($exchangeCodes as $exchangeItem){
+                if(isset($exchangeItem["exchangeIcon"])){
+                    $exchangeItem['index'] = $indexExchange++;
+                    $exchangeItem["exchangeIcon"] = $this->purl($exchangeItem["exchangeIcon"]);
+                }
+
+                array_push($exchangeResults, $exchangeItem);
+            }
+
+            $itemData = array_merge($itemData, array("exchange"=> $exchangeResults));
+            $itemData = array_merge($itemData, array('currencie'=> $document));
+            array_push($result, $itemData);
+        }
         return $result;
     }
 
@@ -608,6 +633,13 @@ class CurrencyController extends Controller {
      */
     public function getvolexchange(){
         $num = $_GET['page'];
+
+        $exchange = Flight::db()->Exchange;
+        $exchangePrice = Flight::db()->Exchange_Price;
+        ini_set('mongo.long_as_object', 1);
+
+        
+
         $url = 'api.feixiaohao.com/exchange/volrank/'.$num.'/?exchangeType=0';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);

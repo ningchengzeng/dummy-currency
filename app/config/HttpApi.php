@@ -654,6 +654,10 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->getICO());
         });
+        Flight::route("/mapi/mobile/getConceptNew", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getConceptNew());
+        });
 
     }
 

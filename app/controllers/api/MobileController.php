@@ -184,6 +184,35 @@ class MobileController extends Controller {
         );
     }
 
+
+    public function getExchangeDetail(){
+        $query = Flight::request()->query;
+
+        $collection = Flight::db()->Exchange;
+        $collectionExchange = Flight::db()->Exchange_Price;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->findOne(array("code" => $query["currenty"]));
+        $colResult = $collectionExchange->find(array("exchangeCode"=> $query["currenty"]));
+
+        $col["icon"] = $this->purl($col["icon"]);;
+
+        $result = array();
+        foreach($colResult as $document){
+            if(isset($document["coinIcon"])){
+                $document["exchangeIcon"] = $this-> purl($document["exchangeIcon"]);;
+                $document["coinIcon"] = $this->purl($document["coinIcon"]);;
+                array_push($result, $document);
+            }
+        }
+        return array(
+            "coin" => $result,
+            "detail" => $col
+        );
+
+    }
+
+
     /**
      * ICO信息
      * @return array
@@ -312,12 +341,32 @@ class MobileController extends Controller {
      * @return mixed
      */
     public function getcharts(){
+//        $dataType = $_GET['dataType'];
+//        $url = 'api.feixiaohao.com/charts/?dataType=0' . $dataType . '/';
+//        $ch = curl_init();
+//        curl_setopt($ch, CURLOPT_URL, $url);
+//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//        return json_decode(curl_exec($ch));
+
         $dataType = $_GET['dataType'];
-        $url = 'api.feixiaohao.com/charts/?dataType=0' . $dataType . '/';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        return json_decode(curl_exec($ch));
+        $collection = Flight::db()->Charts;
+        ini_set('mongo.long_as_object', 1);
+        $col = $collection->findOne(Array("dataType"=> $dataType));
+
+        $market_cap_by_available_supply = array();
+        foreach ($col["market_cap_by_available_supply"] as $item){
+            array_push($market_cap_by_available_supply, array(intval($item[0]->value), $item[1]));
+        }
+
+        $vol_usd = array();
+        foreach ($col["vol_usd"] as $key => $item){
+            array_push($vol_usd, array(intval($item[0]->value), $item[1]));
+        }
+
+        return array(
+            "market_cap_by_available_supply"=> $market_cap_by_available_supply,
+            "vol_usd" => $vol_usd
+        );
     }
 
 
@@ -360,19 +409,31 @@ class MobileController extends Controller {
         return $result;
     }
 
+
+    /**
+     * 月成交额
+     * @return mixed
+     */
     public function getMonthMxchange(){
-        $num = $_GET['page'];
-        $url= 'mapi.feixiaohao.com/vol/moremonthrank/?page='.$num;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        //curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        $result=curl_exec($ch);
-        $result = str_replace("//static.feixiaohao.com","themes",$result);
-        $result = preg_replace("#/\d{8}/#", "/time/", $result);
-        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
-        return json_decode($result);
+        $query = Flight::request()->query;
+        $pagesize =50;
+        $page= $query['page'];
+
+        $collection = Flight::db()->Month_Exchange;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->find();
+        $col->skip(($page-1) * $pagesize);
+        $col->limit($pagesize);
+
+        $result = array();
+        foreach($col as $document){
+            if(isset($document["icon"])){
+                $document["icon"] = $this->purl($document["icon"]);
+                array_push($result,$document);
+            }
+        }
+        return $result;
     }
 
 
@@ -756,16 +817,102 @@ class MobileController extends Controller {
 
     public function getmExchange()
     {
-        $page = $_GET["page"];
-        $url = 'mapi.feixiaohao.com/exchange/more_V2/?page='.$page;
+//        $page = $_GET["page"];
+//        $url = 'mapi.feixiaohao.com/exchange/more_V2/?page='.$page;
+//        $ch = curl_init();
+//        curl_setopt($ch, CURLOPT_URL, $url);
+//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//        $result = curl_exec($ch);
+//        $result = $this->purl($result);
+//        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+//
+//        return json_decode($result);
+
+
+        $query = Flight::request()->query;
+        $pagesize = $query['pagesize'];
+        $page= $query['page'];
+        $filter = $query["filter"];
+        $code = $query["code"];
+        $type = $query["type"];
+
+        $mongoQuery = array("description"=> array("\$exists"=> true));
+        if($code != ""){
+            $mongoQuery = array_merge($mongoQuery, array("country.code"=> $code));
+        }
+
+        if($type != ""){
+            $mongoQuery = array_merge($mongoQuery, array("tags"=> $type));
+        }
+
+        $mongoSort = array();
+        if($filter != ""){
+            if($filter == 'title'){
+                $mongoSort = array_merge($mongoSort, array('title' => 1));
+            }
+
+            if($filter == 'star'){
+                $mongoSort = array_merge($mongoSort, array('star' => -1));
+            }
+
+            if($filter == 'coinCount'){
+                $mongoSort = array_merge($mongoSort, array('coinCount' => 1));
+            }
+        }else{
+            $mongoSort = array("rank" => 1);
+        }
+
+        $collection = Flight::db()->Exchange;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->find($mongoQuery)->sort($mongoSort);
+        $col->skip(($page-1) * $pagesize);
+        $col->limit($pagesize);
+
+        $result = array();
+        foreach($col as $document){
+            if(isset($document["icon"])){
+                $document["icon"] = $this->purl($document["icon"]);
+                array_push($result,$document);
+            }
+        }
+        return array(
+            "result" => $result,
+            "count" => $collection->count()
+        );
+    }
+
+    public function exchangeCoinvol(){
+        $currency = $_GET['currency'];
+        $url = 'mapi.feixiaohao.com/exchange_coinvol/' . $currency . '/';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $result = curl_exec($ch);
-        $result = $this->purl($result);
-        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+        return json_decode(curl_exec($ch));
+    }
 
-        return json_decode($result);
+
+    public function platformrank(){
+        $currency = $_GET['currency'];
+        //$time=$_GET['time'];
+        $url = 'mapi.feixiaohao.com/platformrank/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        return json_decode(curl_exec($ch));
+
+    }
+
+    public function getConceptNew(){
+        $collection= Flight::db()->Concept;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->find();
+        $result = array();
+        foreach($col as $document){
+            array_push($result,$document);
+        }
+        return $result;
     }
 
     public function getGbi(){
