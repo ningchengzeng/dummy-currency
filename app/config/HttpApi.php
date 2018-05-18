@@ -658,7 +658,16 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->getConceptNew());
         });
-
+        Flight::route("/mapi/mobile/getExchangeDetail", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getExchangeDetail());
+        });
+        Flight::route("/mapi/mobile/getConceptCoin", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getConceptCoin());
+        });
+        
+        
     }
 
 

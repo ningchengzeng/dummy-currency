@@ -193,20 +193,20 @@ class MobileController extends Controller {
         ini_set('mongo.long_as_object', 1);
 
         $col = $collection->findOne(array("code" => $query["currenty"]));
-        $colResult = $collectionExchange->find(array("exchangeCode"=> $query["currenty"]));
+        $colResult = $collectionExchange->find(array("exchange.code"=> $query["currenty"]));
 
         $col["icon"] = $this->purl($col["icon"]);;
 
         $result = array();
         foreach($colResult as $document){
-            if(isset($document["coinIcon"])){
-                $document["exchangeIcon"] = $this-> purl($document["exchangeIcon"]);;
-                $document["coinIcon"] = $this->purl($document["coinIcon"]);;
+            if(isset($document["coin"])){
+                $document["exchangeIcon"] = $this-> purl($document["exchange"]["icon"]);
+                $document["coinIcon"] = $this->purl($document["coin"]["icon"]);
                 array_push($result, $document);
             }
         }
         return array(
-            "coin" => $result,
+            "code" => $result,
             "detail" => $col
         );
 
@@ -219,7 +219,7 @@ class MobileController extends Controller {
      */
     public function getICO(){
         $currency = $_GET['currency'];
-        $query = array("code"=>$currency);
+        $query = array("coin"=>$currency);
         $collection= Flight::db()->Currencies_ICO;
         ini_set('mongo.long_as_object', 1);
         $col = $collection->findOne($query);
@@ -230,8 +230,7 @@ class MobileController extends Controller {
      * 最新上市
      * @return mixed
      */
-    public function getNewCoin()
-    {
+    public function getNewCoin(){
         $collection= Flight::db()->Currencies_Grounding;
         ini_set('mongo.long_as_object', 1);
         $col = $collection->find();
@@ -247,14 +246,13 @@ class MobileController extends Controller {
      * 交易平台
      * @return mixed
      */
-    public function getExchange()
-    {
+    public function getExchange(){
         $pagesize = $_GET['pagesize'];
         $page=$_GET['page'];
         $collection= Flight::db()->Exchange;
         ini_set('mongo.long_as_object', 1);
         $col = $collection->find();
-//        $col->sort(['star' => 1]);
+        //        $col->sort(['star' => 1]);
         $col->skip(($page-1)*$pagesize);
         $col->limit($pagesize);
 
@@ -284,7 +282,7 @@ class MobileController extends Controller {
         $col5 = $colwup->find();
         $col6 = $colwdown->find();
 
-//        $col->sort(['star' => 1]);
+        //        $col->sort(['star' => 1]);
         $col24uplist=array();
         $col24downlist=array();
         $coluplist=array();
@@ -327,8 +325,7 @@ class MobileController extends Controller {
         return $result;
     }
 
-    public function getExchangeCount()
-    {
+    public function getExchangeCount(){
         $collection= Flight::db()->Exchange;
         ini_set('mongo.long_as_object', 1);
         $col = $collection->find();
@@ -341,12 +338,12 @@ class MobileController extends Controller {
      * @return mixed
      */
     public function getcharts(){
-//        $dataType = $_GET['dataType'];
-//        $url = 'api.feixiaohao.com/charts/?dataType=0' . $dataType . '/';
-//        $ch = curl_init();
-//        curl_setopt($ch, CURLOPT_URL, $url);
-//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//        return json_decode(curl_exec($ch));
+        //        $dataType = $_GET['dataType'];
+        //        $url = 'api.feixiaohao.com/charts/?dataType=0' . $dataType . '/';
+        //        $ch = curl_init();
+        //        curl_setopt($ch, CURLOPT_URL, $url);
+        //        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        //        return json_decode(curl_exec($ch));
 
         $dataType = $_GET['dataType'];
         $collection = Flight::db()->Charts;
@@ -370,44 +367,6 @@ class MobileController extends Controller {
     }
 
 
-    /**
-     * 24消失成交额排行榜(币种)
-     * @return mixed
-     */
-    public function getvol(){
-        $num = $_GET['page'];
-        $url = 'mapi.feixiaohao.com/v2/vol/morevol/?page='.$num;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        //curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        $result = curl_exec($ch);
-        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
-        $result = str_replace("//static.feixiaohao.com/coin/","themes/coin/mid/",$result);
-        return $result;
-    }
-
-    /**
-     * 24消失成交额排行榜(交易平台)
-     * @return mixed
-     */
-    public function getvolexchange(){
-        $num = $_GET['page'];
-        //$url = 'api.feixiaohao.com/exchange/volrank/'.$num.'/?exchangeType=0';
-        $url= 'mapi.feixiaohao.com/v2/vol/moreexchange/?exchangeType=0&page='.$num;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        //curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        $result=curl_exec($ch);
-        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
-        $result = str_replace("//static.feixiaohao.com/platimages/","themes/coin/",$result);
-        $result = str_replace(".png",".png".".jpg",$result);
-        $result = preg_replace("#/\d{8}/#", "/time/", $result);
-        return $result;
-    }
 
 
     /**
@@ -437,52 +396,7 @@ class MobileController extends Controller {
     }
 
 
-    /***
-     * 饼图
-     * 调用接口 api.feixiaohao.com/cointrades_percent/bitcoin
-     * @return json
-     */
-    public function getCointradesPercent()
-    {
-        $currency = $_GET['currency'];
-        $url = 'mapi.feixiaohao.com/cointrades_percent/' . $currency . '/';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        return json_decode(curl_exec($ch));
-        //return $currency;
-    }
 
-    /***
-     * 价格趋势
-     * 调用接口 mapi.feixiaohao.com/coinhisdata/bitcoin
-     * @return json
-     */
-    public function getCoinhisdata()
-    {
-        $currency = $_GET['currency'];
-        //$time = $_GET['time'];
-        $url = 'mapi.feixiaohao.com/coinhisdata/' . $currency;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        return json_decode(curl_exec($ch));
-    }
-
-    /***
-     * 调用接口 api.feixiaohao.com/coinrank/bitcoin
-     * @return json
-     */
-    public function getCoinrank()
-    {
-        $currency = $_GET['currency'];
-        //$time=$_GET['time'];
-        $url = 'mapi.feixiaohao.com/coinrank/' . $currency;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        return json_decode(curl_exec($ch));
-    }
 
 
     /**
@@ -679,8 +593,7 @@ class MobileController extends Controller {
      * 首页OR内页热门概念
      * @return mixed
      */
-    public function hotconcept()
-    {
+    public function hotconcept(){
         $params = Flight::request()->query;
         $concept = Flight::db()->Concept;
         ini_set('mongo.long_as_object', 1);
@@ -692,10 +605,10 @@ class MobileController extends Controller {
             foreach ($col as $document) {
                 if($flage){
                     $defaultConceptid = $document["index"];
-                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\" class=\"active\">" .$document["title"]. "</a>";
+                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\" class=\"active\">" .$document["title"]["en"]."</a>";
                 }
                 else{
-                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\">" .$document["title"]. "</a>";
+                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\">" .$document["title"]["en"]."</a>";
                 }
 
                 $flage = false;
@@ -734,28 +647,13 @@ class MobileController extends Controller {
     }
 
 
-    /***
-     * 调用接口 api.feixiaohao.com/coinevent/bitcoin
-     * 不做格式化直接返回HTML页面
-     * @return json
-     */
-    public function getCoinevent()
-    {
-        $currency = $_GET['currency'];
-        $url = 'mapi.feixiaohao.com/coinevent/' . $currency;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
-        return curl_exec($ch);
-    }
+   
 
 
     /***
      *最新上市
      */
-    public function homenewcoin()
-    {
+    public function homenewcoin(){
         $thead = "<thead>
                     <tr><th>名称</th>
                     <th>价格</th>
@@ -801,32 +699,18 @@ class MobileController extends Controller {
         return $thead. "<tbody>$trs</tbody>";
     }
 
-    public function getmhotconcept()
-    {
-        $conceptid = $_GET["conceptid"];
-        $url = 'mapi.feixiaohao.com/v2/mhotconcept/' . $conceptid .'/';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $result = curl_exec($ch);
-        $result = $this->purl($result);
-        $result = str_replace("/currencies/","currencies.html?currency=",$result);
-        return json_decode($result);
-    }
 
-
-    public function getmExchange()
-    {
-//        $page = $_GET["page"];
-//        $url = 'mapi.feixiaohao.com/exchange/more_V2/?page='.$page;
-//        $ch = curl_init();
-//        curl_setopt($ch, CURLOPT_URL, $url);
-//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//        $result = curl_exec($ch);
-//        $result = $this->purl($result);
-//        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
-//
-//        return json_decode($result);
+    public function getmExchange(){
+        //        $page = $_GET["page"];
+        //        $url = 'mapi.feixiaohao.com/exchange/more_V2/?page='.$page;
+        //        $ch = curl_init();
+        //        curl_setopt($ch, CURLOPT_URL, $url);
+        //        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        //        $result = curl_exec($ch);
+        //        $result = $this->purl($result);
+        //        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+        //
+        //        return json_decode($result);
 
 
         $query = Flight::request()->query;
@@ -882,9 +766,46 @@ class MobileController extends Controller {
         );
     }
 
-    public function exchangeCoinvol(){
-        $currency = $_GET['currency'];
-        $url = 'mapi.feixiaohao.com/exchange_coinvol/' . $currency . '/';
+    public function getConceptNew(){
+        $collection= Flight::db()->Concept;
+        ini_set('mongo.long_as_object', 1);
+
+        $col = $collection->find();
+        $result = array();
+        foreach($col as $document){
+            array_push($result,$document);
+        }
+        return $result;
+    }
+
+
+    public function getConceptCoin(){
+        $query = Flight::request()->query;
+        $collection = Flight::db()->Concept;
+        $currencies = Flight::db()->Currencies_Price;
+
+        ini_set('mongo.long_as_object', 1);
+
+        $document = $collection->findOne(array("index"=> $query["index"]));
+        $colCon = $currencies->find(array("concept.index"=> $query["index"]))->sort(array("volume.usd"=>-1));;
+        $list = array();
+        $index = 0;
+        foreach($colCon as $documentItem){
+            $documentItem["index"] = ++$index;
+            array_push($list, $documentItem);
+        }
+        return array(
+            "list"=> $list,
+            "desc" => $document
+        );
+    }
+
+
+
+    public function getGbi(){
+        $time = $_GET['time'];
+        //$time = $_GET['time'];
+        $url = 'mapi.feixiaohao.com/gbi/';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -900,29 +821,133 @@ class MobileController extends Controller {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         return json_decode(curl_exec($ch));
-
     }
 
-    public function getConceptNew(){
-        $collection= Flight::db()->Concept;
-        ini_set('mongo.long_as_object', 1);
-
-        $col = $collection->find();
-        $result = array();
-        foreach($col as $document){
-            array_push($result,$document);
-        }
-        return $result;
-    }
-
-    public function getGbi(){
-        $time = $_GET['time'];
-        //$time = $_GET['time'];
-        $url = 'mapi.feixiaohao.com/gbi/';
+    public function exchangeCoinvol(){
+        $currency = $_GET['currency'];
+        $url = 'mapi.feixiaohao.com/exchange_coinvol/' . $currency . '/';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         return json_decode(curl_exec($ch));
+    }
+
+    public function getmhotconcept()
+    {
+        $conceptid = $_GET["conceptid"];
+        $url = 'mapi.feixiaohao.com/v2/mhotconcept/' . $conceptid .'/';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        $result = $this->purl($result);
+        $result = str_replace("/currencies/","currencies.html?currency=",$result);
+        return json_decode($result);
+    }
+
+
+     /***
+     * 调用接口 api.feixiaohao.com/coinevent/bitcoin
+     * 不做格式化直接返回HTML页面
+     * @return json
+     */
+    public function getCoinevent()
+    {
+        $currency = $_GET['currency'];
+        $url = 'mapi.feixiaohao.com/coinevent/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
+        return curl_exec($ch);
+    }
+
+    /***
+     * 饼图
+     * 调用接口 api.feixiaohao.com/cointrades_percent/bitcoin
+     * @return json
+     */
+    public function getCointradesPercent()
+    {
+        $currency = $_GET['currency'];
+        $url = 'mapi.feixiaohao.com/cointrades_percent/' . $currency . '/';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        return json_decode(curl_exec($ch));
+        //return $currency;
+    }
+
+    /***
+     * 价格趋势
+     * 调用接口 mapi.feixiaohao.com/coinhisdata/bitcoin
+     * @return json
+     */
+    public function getCoinhisdata()
+    {
+        $currency = $_GET['currency'];
+        //$time = $_GET['time'];
+        $url = 'mapi.feixiaohao.com/coinhisdata/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        return json_decode(curl_exec($ch));
+    }
+
+    /***
+     * 调用接口 api.feixiaohao.com/coinrank/bitcoin
+     * @return json
+     */
+    public function getCoinrank()
+    {
+        $currency = $_GET['currency'];
+        //$time=$_GET['time'];
+        $url = 'mapi.feixiaohao.com/coinrank/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        return json_decode(curl_exec($ch));
+    }
+
+
+    
+    /**
+     * 24消失成交额排行榜(币种)
+     * @return mixed
+     */
+    public function getvol(){
+        $num = $_GET['page'];
+        $url = 'mapi.feixiaohao.com/v2/vol/morevol/?page='.$num;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        //curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
+        $result = curl_exec($ch);
+        $result = str_replace("/currencies/","currencies.html?currency=",$result);
+        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+        $result = str_replace("//static.feixiaohao.com/coin/","themes/coin/mid/",$result);
+        return $result;
+    }
+
+    /**
+     * 24消失成交额排行榜(交易平台)
+     * @return mixed
+     */
+    public function getvolexchange(){
+        $num = $_GET['page'];
+        //$url = 'api.feixiaohao.com/exchange/volrank/'.$num.'/?exchangeType=0';
+        $url= 'mapi.feixiaohao.com/v2/vol/moreexchange/?exchangeType=0&page='.$num;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        //curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
+        $result=curl_exec($ch);
+        $result = str_replace("/currencies/","currencies.html?currency=",$result);
+        $result = str_replace("/exchange/","exchangedetails.html?currency=",$result);
+        $result = str_replace("//static.feixiaohao.com/platimages/","themes/coin/",$result);
+        $result = str_replace(".png",".png".".jpg",$result);
+        $result = preg_replace("#/\d{8}/#", "/time/", $result);
+        return $result;
     }
 
 }
