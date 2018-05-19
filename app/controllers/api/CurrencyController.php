@@ -27,8 +27,9 @@ class CurrencyController extends Controller {
                         虚拟币：<a href=\"index.html?type=dummcy\">".$col["dummcy"]."</a><i class=\"space\"></i>
                         代币：<a href=\"index.html?type=token\">".$col["token"]."</a><i class=\"space\"></i>
                         交易平台：<a href=\"exchange.html\" >".$col["exchange"]."</a><i class=\"space\"></i>
-                        24小时成交量：<a id=\"total_vol\" class=\"totalvolcap\" href =\"charts.html\" >".$col["amount"]["price"]."</a></i>
-                        总市值：<a  id=\"total_cap\" class=\"totalvolcap\" href =\"charts.html\" >".$col["market"]["price"]."</a></i>
+                        24小时成交量：<a id=\"total_vol\" class=\"totalvolcap\" href =\"charts.html\" >".$col["amount"]["price"]."</a><i class=\"space\"></i>
+                        总市值：<a  id=\"total_cap\" class=\"totalvolcap\" href =\"charts.html\" >".$col["market"]["price"]."</a><i class=\"space\"></i>
+                        GBI指数：<a  id=\"total_gbi\" class=\"totalvolcap\" href =\"gbi.html\">".$col["gbi"]["price"]."</a><i class=\"space\"></i>
                         <div class=\"leftSise\"></div>
                     </div>
                     <div class=\"rightSise loginbar\">
