@@ -159,9 +159,8 @@ class HttpApi {
             else{
                 $captcha = Utils::generate_code();
                 $smsCol = $sms->findOne(array("telno"=> $telno));
-                if($col["ts"] > (time() - 60 * 3)){
-                    $result = "2";
-                }else{
+
+                if($col == null || $col["ts"] > (time() - 360)){
                     $code = Utils::sendSmsCode($captcha, $telno);
                     if($code){
                         if($smsCol != null){
@@ -179,9 +178,13 @@ class HttpApi {
                         $result = "0";
                     }
                 }
+                else{
+                    $result = "2";
+                }
             }
             Flight::json(array("result"=> $result));
         });
+
         /**
          * 注册账户
          */
@@ -189,11 +192,26 @@ class HttpApi {
             $data = Flight::request()->data;
             $user = Flight::db()->User;
             $sms = Flight::db()->Sms;
-
+            $verifyImageCol = Flight::db()->VerifyImage;
             ini_set('mongo.long_as_object', 1);
 
             $telno = $data["userid"];
             $col = $user->findOne(array("username"=> $telno));
+            $verifyImage = $verifyImageCol->findOne(array("phone"=>$telno));
+
+            if($verifyImage == null){
+                Flight::json(array(
+                    "content" => "图片验证码错误！",
+                    "status" => "error"
+                ));
+                return;
+            }else if(strtolower($verifyImage["code"]) != strtolower($data["verifyImage"])){
+                Flight::json(array(
+                    "content" => "图片验证码错误！",
+                    "status" => "error"
+                ));
+                return;
+            }
 
             if($col != null){
                 Flight::json(array(
@@ -220,13 +238,14 @@ class HttpApi {
                     "status" => "error"
                 ));
                 return;
-            }
-
-            if($smsCol["captcha"] != $data["verifyCode"]){
+            }else if($smsCol["captcha"] != $data["verifyCode"]){
                 Flight::json(array(
                     "content" => "验证码不正确！",
                     "status" => "error"
                 ));
+                return;
+            }else if(!((time() - $smsCol["ts"]->value) <= 360)){
+                Flight::json(array("code"=>6, "message" => "验证码已经过期!"));
                 return;
             }
 
@@ -444,8 +463,6 @@ class HttpApi {
          * 图片验证码
          */
         Flight::route("/user/verifyImage", function (){
-            $currency = Flight::currency();
-            $currency->verifyImage();
             $query = Flight::request()->query;
             $phone = $query["phone"];
 
@@ -459,6 +476,9 @@ class HttpApi {
             $collection->insert(array("phone"=>$phone, "code" => $verify->m_verify_code, "ts" => time()));
         });
 
+        /**
+         * 找回密码
+         */
         Flight::route("/user/finpwd", function(){
             $data = Flight::request()->data;
             $verifyImageCol = Flight::db()->VerifyImage;
@@ -482,12 +502,16 @@ class HttpApi {
                 return;
             }
 
-            $sms = $smsCol->findOne(array("telno"=> $data["phone"],"captcha"=>$data["captcha"]));
+            $sms = $smsCol->findOne(array("telno"=> $data["phone"]));
             if($sms == null){
                 Flight::json(array("code"=>5, "message" => "验证码不正确!"));
                 return;
             }
-            else if(!((time() * 1000 - $sms["ts"]) <= (360* 1000))){
+            else if($sms["captcha"] != $data["captcha"]){
+                Flight::json(array("code"=>5, "message" => "验证码不正确!"));
+                return;
+            }
+            else if(!((time() * 1000 - $sms["ts"]->value) <= (360* 1000))){
                 Flight::json(array("code"=>6, "message" => "验证码已经过期!"));
                 return;
             }
