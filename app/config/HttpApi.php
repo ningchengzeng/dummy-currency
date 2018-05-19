@@ -580,6 +580,15 @@ class HttpApi {
         });
 
         Flight::register("currency", "\App\Controllers\api\CurrencyController");
+        Flight::route("/api/currency/exchange_coinvol", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->exchangeCoinvol());
+        });
+        Flight::route("/api/currency/platformrank", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->platformrank());
+        });
+
         Flight::route("/api/currency/indexAll", function(){
             $currency = Flight::currency();
             Flight::json($currency->indexAll());

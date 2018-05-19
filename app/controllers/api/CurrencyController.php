@@ -691,6 +691,20 @@ class CurrencyController extends Controller {
     }
 
     /**
+     *
+     * @return mixed
+     */
+    public function platformrank(){
+        $currency = $_GET['currency'];
+        $url = 'api.feixiaohao.com/platformrank/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
+        return json_decode(curl_exec($ch));
+    }
+
+    /**
      * 首页成交量排行榜
      */
     public function homevolrank(){
