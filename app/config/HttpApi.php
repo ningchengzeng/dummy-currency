@@ -518,6 +518,10 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->getExchangeDetail());
         });
+        Flight::route("/api/currency/exchange_coinvol", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->exchangeCoinvol());
+        });
         Flight::route("/api/currency/getupdown", function(){
             $currency = Flight::currency();
             Flight::json($currency->gettup());

@@ -250,7 +250,7 @@ class CurrencyController extends Controller {
         $collectionExchange = Flight::db()->Exchange_Price;
 
         ini_set('mongo.long_as_object', 1);
-        $colExchange = $collectionExchange->find(array('coinCode'=>$currency))->sort(array("price.cny"=> -1));
+        $colExchange = $collectionExchange->find(array('coin.code'=>$currency))->sort(array("volume.cny"=> -1));
         $userCurrencyCount = $userCurrency->count(array("userid"=>$psession, "code"=> $currency));
 
         $exchangeList = array();
@@ -258,12 +258,14 @@ class CurrencyController extends Controller {
         foreach ($colExchange as $item){
             $index ++;
             $item["index"] = $index;
-            $item["exchangeIcon"] = $this->purl($item["exchangeIcon"]);
+            $item["exchange"]["icon"] = $this->purl($item["exchange"]["icon"]);
             array_push($exchangeList, $item);
         }
 
+        $currencie = $collection->findOne($query);
+        $currencie["icon"] = $this->purl($currencie["icon"]);
         return array(
-            "detail" => $collection->findOne($query),
+            "detail" => $currencie,
             "focus" => $userCurrencyCount > 0,
             "exchange" => $exchangeList
         );
@@ -372,10 +374,10 @@ class CurrencyController extends Controller {
             }
 
             if($filter == 'coinCount'){
-                $mongoSort = array_merge($mongoSort, array('coinCount' => 1));
+                $mongoSort = array_merge($mongoSort, array('transactionPairCount' => -1));
             }
         }else{
-            $mongoSort = array("rank" => 1);
+            $mongoSort = array("price.cny" => -1);
         }
 
         $collection = Flight::db()->Exchange;
@@ -386,7 +388,9 @@ class CurrencyController extends Controller {
         $col->limit($pagesize);
 
         $result = array();
+        $index = 1;
         foreach($col as $document){
+            $document["index"] = $index++;
             if(isset($document["icon"])){
                 $document["icon"] = $this->purl($document["icon"]);
                 array_push($result,$document);
@@ -410,15 +414,15 @@ class CurrencyController extends Controller {
         ini_set('mongo.long_as_object', 1);
 
         $col = $collection->findOne(array("code" => $query["currenty"]));
-        $colResult = $collectionExchange->find(array("exchangeCode"=> $query["currenty"]));
+        $colResult = $collectionExchange->find(array("exchange.code"=> $query["currenty"]))->sort(array("volume.cny" => -1));
 
         $col["icon"] = $this->purl($col["icon"]);;
 
         $result = array();
         foreach($colResult as $document){
-            if(isset($document["coinIcon"])){
-                $document["exchangeIcon"] = $this->purl($document["exchangeIcon"]);;
-                $document["coinIcon"] = $this->purl($document["coinIcon"]);;
+            if(isset($document["coin"]["icon"])){
+                $document["exchange"]['icon'] = $this->purl($document["exchange"]['icon']);;
+                $document["coin"]['icon'] = $this->purl($document["coin"]['icon']);;
                 array_push($result, $document);
             }
         }
@@ -565,24 +569,13 @@ class CurrencyController extends Controller {
      */
     public function getcharts(){
         $dataType = $_GET['dataType'];
-        $collection = Flight::db()->Charts;
-        ini_set('mongo.long_as_object', 1);
-        $col = $collection->findOne(Array("dataType"=> $dataType));
+        $url = 'api.feixiaohao.com/charts/?dataType='.$dataType;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        $market_cap_by_available_supply = array();
-        foreach ($col["market_cap_by_available_supply"] as $item){
-            array_push($market_cap_by_available_supply, array(intval($item[0]->value), $item[1]));
-        }
-
-        $vol_usd = array();
-        foreach ($col["vol_usd"] as $key => $item){
-            array_push($vol_usd, array(intval($item[0]->value), $item[1]));
-        }
-
-        return array(
-            "market_cap_by_available_supply"=> $market_cap_by_available_supply,
-            "vol_usd" => $vol_usd
-        );
+        $this->setUrlOption($ch);
+        return json_decode(curl_exec($ch));
     }
 
     /**
@@ -592,39 +585,16 @@ class CurrencyController extends Controller {
     public function getvol(){
         $num = $_GET['page'];
 
-        $currencies = Flight::db()->Currencies_Price;
-        $exchangePrice = Flight::db()->Exchange_Price;
-        ini_set('mongo.long_as_object', 1);
-        $currenciesCol = $currencies->find()->sort(array("marketCap.usd" => -1))->skip((($num-1) * 5))->limit(5);
+        $url = 'api.feixiaohao.com/currencies/volrank/'.$num;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
+        $data = curl_exec($ch);
 
-        $index = 1;
-        $result = array();
-        foreach ($currenciesCol as $document){
-            $itemData = array();
-
-            if(isset($document["icon"])){
-                $document['index'] = (($num-1) * 5) + $index++;
-                $document["icon"] = $this->purl($document["icon"]);
-            }
-
-            $exchangeCodes = $exchangePrice->find(array("coinCode"=> $document["code"]))->sort(array("volume.usd"=> -1))->limit(10);
-
-            $exchangeResults = array();
-            $indexExchange = 1;
-            foreach ($exchangeCodes as $exchangeItem){
-                if(isset($exchangeItem["exchangeIcon"])){
-                    $exchangeItem['index'] = $indexExchange++;
-                    $exchangeItem["exchangeIcon"] = $this->purl($exchangeItem["exchangeIcon"]);
-                }
-
-                array_push($exchangeResults, $exchangeItem);
-            }
-
-            $itemData = array_merge($itemData, array("exchange"=> $exchangeResults));
-            $itemData = array_merge($itemData, array('currencie'=> $document));
-            array_push($result, $itemData);
-        }
-        return $result;
+        $data = preg_replace("/\/currencies\/([\w\d]*)\//i","currencies.html?currency=$1", $data);
+        $data = preg_replace("/\/exchange\/([\w\d]*)\//i","exchangedetails.html?currenty=$1",$data);
+        return $data;
     }
 
     /**
@@ -633,18 +603,11 @@ class CurrencyController extends Controller {
      */
     public function getvolexchange(){
         $num = $_GET['page'];
-
-        $exchange = Flight::db()->Exchange;
-        $exchangePrice = Flight::db()->Exchange_Price;
-        ini_set('mongo.long_as_object', 1);
-
-        
-
-        $url = 'api.feixiaohao.com/exchange/volrank/'.$num.'/?exchangeType=0';
+        $url = 'api.feixiaohao.com/exchange/volrank/'.$num;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
+        $this->setUrlOption($ch);
         $data = curl_exec($ch);
 
         $data = preg_replace("/\/currencies\/([\w\d]*)\//i","currencies.html?currency=$1", $data);
@@ -659,12 +622,12 @@ class CurrencyController extends Controller {
     public function getCointradesPercent()
     {
         $currency = $_GET['currency'];
-        $url = 'api.feixiaohao.com/cointrades_percent/' . $currency . '/';
+        $url = 'api.feixiaohao.com/cointrades_percent/' . $currency;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
         return json_decode(curl_exec($ch));
-        //return $currency;
     }
 
     /***
@@ -674,11 +637,11 @@ class CurrencyController extends Controller {
     public function getCoinhisdata()
     {
         $currency = $_GET['currency'];
-        //$time = $_GET['time'];
         $url = 'api.feixiaohao.com/coinhisdata/' . $currency;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
         return json_decode(curl_exec($ch));
     }
 
@@ -689,11 +652,11 @@ class CurrencyController extends Controller {
     public function getCoinrank()
     {
         $currency = $_GET['currency'];
-        //$time=$_GET['time'];
         $url = 'api.feixiaohao.com/coinrank/' . $currency;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
         return json_decode(curl_exec($ch));
     }
 
@@ -709,9 +672,21 @@ class CurrencyController extends Controller {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: text/html"));
+        $this->setUrlOption($ch);
         return curl_exec($ch);
+    }
 
+    /**
+     * @return mixed
+     */
+    public function exchangeCoinvol(){
+        $currency = $_GET['currency'];
+        $url = 'api.feixiaohao.com/exchange_coinvol/' . $currency;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
+        return json_decode(curl_exec($ch));
     }
 
     /**
