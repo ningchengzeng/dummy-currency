@@ -57,6 +57,19 @@ class CurrencyController extends Controller {
     }
 
     /**
+     * gbi指数
+     * @return mixed
+     */
+    public function gbi(){
+        $url = 'api.feixiaohao.com/gbi';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->setUrlOption($ch);
+        return json_decode(curl_exec($ch));
+    }
+
+    /**
      * @return array
      *
      */

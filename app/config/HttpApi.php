@@ -588,6 +588,10 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->platformrank());
         });
+        Flight::route("/api/currency/gbi", function(){
+            $currency = Flight::currency();
+            Flight::json($currency->gbi());
+        });
 
         Flight::route("/api/currency/indexAll", function(){
             $currency = Flight::currency();
