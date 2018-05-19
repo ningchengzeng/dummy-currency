@@ -160,7 +160,7 @@ class HttpApi {
                 $captcha = Utils::generate_code();
                 $smsCol = $sms->findOne(array("telno"=> $telno));
 
-                if($col == null || $col["ts"] > (time() - 360)){
+                if($smsCol == null || $col["ts"] < (time() - 360)){
                     $code = Utils::sendSmsCode($captcha, $telno);
                     if($code){
                         if($smsCol != null){
@@ -477,12 +477,56 @@ class HttpApi {
         });
 
         /**
+         * 获取找回密码时的验证码
+         */
+        Flight::route("/user/GetSmsFindPwd", function(){
+            $query = Flight::request()->query;
+            $telno = $query["telno"];
+
+            $user = Flight::db()->User;
+            $sms = Flight::db()->SmsFindPwd;
+            ini_set('mongo.long_as_object', 1);
+
+            $col = $user->findOne(array("username"=> $telno));
+            $result = "1";
+            if($col == null){
+                $result = "3";
+            }
+            else{
+                $captcha = Utils::generate_code();
+                $smsCol = $sms->findOne(array("telno"=> $telno));
+
+                if($smsCol == null || $col["ts"]->value > (time() - 360)){
+                    $code = Utils::sendSmsCode($captcha, $telno);
+                    if($code){
+                        if($smsCol != null){
+                            $sms->remove(array("telno" => $telno));
+                        }
+                        $document = array(
+                            "telno" => $telno,
+                            "captcha" => $captcha,
+                            "ts" => time()
+                        );
+                        $sms->insert($document);
+                        $result = "1";
+                    }
+                    else{
+                        $result = "0";
+                    }
+                }
+                else{
+                    $result = "2";
+                }
+            }
+            Flight::json(array("result"=> $result));
+        });
+        /**
          * 找回密码
          */
         Flight::route("/user/finpwd", function(){
             $data = Flight::request()->data;
             $verifyImageCol = Flight::db()->VerifyImage;
-            $smsCol = Flight::db()->Sms;
+            $smsCol = Flight::db()->SmsFindPwd;
             $userCol = Flight::db()->User;
             ini_set('mongo.long_as_object', 1);
             $user = $userCol->findOne(array("username"=> $data["phone"]));
@@ -511,7 +555,7 @@ class HttpApi {
                 Flight::json(array("code"=>5, "message" => "验证码不正确!"));
                 return;
             }
-            else if(!((time() * 1000 - $sms["ts"]->value) <= (360* 1000))){
+            else if(!((time() - $sms["ts"]->value) <= (360))){
                 Flight::json(array("code"=>6, "message" => "验证码已经过期!"));
                 return;
             }
@@ -521,7 +565,8 @@ class HttpApi {
                 return;
             }
 
-            $user->update(array("username"=> $data["phone"]), array("password"=>md5($data["password"])));
+            $user["password"] = md5($data["password"]);
+            $userCol->update(array("username"=> $data["phone"]), $user);
             Flight::json(array("code"=>1, "message"=> "密码找回成功！请使用新密码登录。"));
         });
 
