@@ -8,8 +8,8 @@
 
 namespace App\Controllers\Api;
 
-use App\Config\Database;
 use App\Controllers\Controller;
+use App\Controllers\VerifyImage;
 use flight;
 
 class CurrencyController extends Controller {
@@ -47,7 +47,7 @@ class CurrencyController extends Controller {
                                     var seting = {
                                         \"login\":\".login\",
                                         \"signup\":\".signup\",
-                                        \"findPassword\":\"/user/findpwd\",
+                                        \"findPassword\":\"findpwd.html\",
                                         \"loginUrl\":\"登陆表单提交地址\",
                                         \"signupUrl\":\"注册表单提交地址\"}
                                 outerWindow(seting);

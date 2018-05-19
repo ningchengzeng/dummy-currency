@@ -413,6 +413,9 @@ class HttpApi {
                 "count" => $count
             ));
         });
+        /**
+         * 取消自选
+         */
         Flight::route("POST /user/unfocus", function(){
             $request = Flight::request();
             $psession = $request->data["psession"];
@@ -435,6 +438,67 @@ class HttpApi {
                 ));
                 return;
             }
+        });
+
+        /**
+         * 图片验证码
+         */
+        Flight::route("/user/verifyImage", function (){
+            $currency = Flight::currency();
+            $currency->verifyImage();
+            $query = Flight::request()->query;
+            $phone = $query["phone"];
+
+            $collection = Flight::db()->VerifyImage;
+            ini_set('mongo.long_as_object', 1);
+
+            $verify = new VerifyImage();
+            $verify->CreateVerifyImage();
+
+            $collection->remove(array("phone"=>$phone));
+            $collection->insert(array("phone"=>$phone, "code" => $verify->m_verify_code, "ts" => time()));
+        });
+
+        Flight::route("/user/finpwd", function(){
+            $data = Flight::request()->data;
+            $verifyImageCol = Flight::db()->VerifyImage;
+            $smsCol = Flight::db()->Sms;
+            $userCol = Flight::db()->User;
+            ini_set('mongo.long_as_object', 1);
+            $user = $userCol->findOne(array("username"=> $data["phone"]));
+            if($user == null){
+                Flight::json(array("code"=>2, "message" => "账户不存在!"));
+                return;
+            }
+
+            $verifyImage = $verifyImageCol->findOne(array("phone"=> $data["phone"]));
+            if($verifyImage == null){
+                Flight::json(array("code"=>3, "message" => "图片验证码不正确!"));
+                return;
+            }
+
+            if(strtolower($data["verifyImage"]) != strtolower($verifyImage["code"])){
+                Flight::json(array("code"=>4, "message" => "图片验证码不正确!"));
+                return;
+            }
+
+            $sms = $smsCol->findOne(array("telno"=> $data["phone"],"captcha"=>$data["captcha"]));
+            if($sms == null){
+                Flight::json(array("code"=>5, "message" => "验证码不正确!"));
+                return;
+            }
+            else if(!((time() * 1000 - $sms["ts"]) <= (360* 1000))){
+                Flight::json(array("code"=>6, "message" => "验证码已经过期!"));
+                return;
+            }
+
+            if($data["password"] != $data["repassword"]){
+                Flight::json(array("code"=>7, "message" => "两次密码不相同!"));
+                return;
+            }
+
+            $user->update(array("username"=> $data["phone"]), array("password"=>md5($data["password"])));
+            Flight::json(array("code"=>1, "message"=> "密码找回成功！请使用新密码登录。"));
         });
 
         /**
@@ -518,10 +582,6 @@ class HttpApi {
             $currency = Flight::currency();
             Flight::json($currency->getExchangeDetail());
         });
-        Flight::route("/api/currency/exchange_coinvol", function(){
-            $currency = Flight::currency();
-            Flight::json($currency->exchangeCoinvol());
-        });
         Flight::route("/api/currency/getupdown", function(){
             $currency = Flight::currency();
             Flight::json($currency->gettup());
@@ -573,7 +633,6 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->search());
         });
-
         Flight::route("/mapi/mobile/getCointradesPercent", function(){
             $currency = Flight::mobile();
             Flight::json($currency->getCointradesPercent());
@@ -670,10 +729,13 @@ class HttpApi {
             $currency = Flight::mobile();
             Flight::json($currency->getConceptCoin());
         });
-        
-        
+        Flight::route("/mapi/mobile/showmarket", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->showmarket());
+        });
+        Flight::route("/mapi/mobile/getcoinmarket", function(){
+            $currency = Flight::mobile();
+            Flight::json($currency->getcoinmarket());
+        });
     }
-
-
-
 }

@@ -18,10 +18,12 @@ class MobileController extends Controller {
     public function __construct() {
     }
 
-    /**
-     * @return array
-     *
-     */
+    // private static final String OrderNo = "VDT2018040901544209XhJ8Tk";
+    // private static final String Secret = "8a176456e5e431e3a817eIP07a14495280";
+    // private static final String IP = "http://dynamic.xiongmaodaili.com:8088";
+    // private static final int Port = 8088;
+
+
     /**
      * @return array
      *
@@ -160,21 +162,26 @@ class MobileController extends Controller {
         $collection= Flight::db()->Currencies;
         $userCurrency = Flight::db()->User_Currencies;
         $collectionExchange = Flight::db()->Exchange_Price;
+        
 
         ini_set('mongo.long_as_object', 1);
-        $colExchange = $collectionExchange->find(array('coinCode'=>$currency))->sort(array("price.cny"=> -1));
+        
+        $colExchange = $collectionExchange->find(array('coin.code'=>$currency))->limit(10)->sort(array("price.cny"=> -1));
         $userCurrencyCount = $userCurrency->count(array("userid"=>$psession, "code"=> $currency));
-
         $exchangeList = array();
         $index = 0;
+        $detail = $collection->findOne($query);
+
         foreach ($colExchange as $item){
             $index ++;
             $item["index"] = $index;
-            $item["exchangeIcon"] = $this->purl($item["exchangeIcon"]);
+            $item["exchangeIcon"] = $this->purl($item["exchange"]["icon"]);
+            
             array_push($exchangeList, $item);
         }
+    
 
-        $detail = $collection->findOne($query);
+        
         $detail["icon"] = $this->purl($detail["icon"]);
 
         return array(
@@ -263,6 +270,51 @@ class MobileController extends Controller {
         }
         return $result;
     }
+
+
+    public function getcoinmarket(){
+        $page=$_GET['page'];
+        $currency=$_GET['currency'];
+        $collectionExchange = Flight::db()->Exchange_Price;
+        ini_set('mongo.long_as_object', 1);
+        //$colExchange = $collectionExchange->find(array('coin.code'=>$currency))->sort(array("price.cny"=> -1));
+        $col = $collectionExchange->find(array('coin.code'=>$currency));
+        $col->sort(['price.cny' => -1]);
+        $col->skip(($page-1)*50);
+        $col->limit(50);
+        
+        $title = $collectionExchange->findOne(array('coin.code'=>$currency))["coin"]["title"];
+        $result = array();
+        foreach($col as $document){
+            $document["exchange"]["icon"] = $this->purl($document["exchange"]["icon"]);
+            array_push($result,$document);
+        }
+        return array(
+            "result" => $result,
+            "title" => $title
+        ) ;
+    }
+
+      public function test(){
+
+        $collectionExchange = Flight::db()->Exchange_Price;
+
+        ini_set('mongo.long_as_object', 1);
+        
+        $colExchange = $collectionExchange->find(array('coin.code'=>$currency))->limit(10)->sort(array("price.cny"=> -1));
+        $userCurrencyCount = $userCurrency->count(array("userid"=>$psession, "code"=> $currency));
+        $exchangeList = array();
+        $index = 0;
+        $detail = $collection->findOne($query);
+
+        foreach ($colExchange as $item){
+            $index ++;
+            $item["index"] = $index;
+            $item["exchangeIcon"] = $this->purl($item["exchange"]["icon"]);
+            
+            array_push($exchangeList, $item);
+        }
+      }
 
 
     public function gettup(){
@@ -397,7 +449,29 @@ class MobileController extends Controller {
 
 
 
+    /**
+     * @return array
+     */
+    public function showmarket(){
+        $showmarkets = Flight::db()->Showmarkets;
+        ini_set('mongo.long_as_object', 1);
 
+        $col = $showmarkets->find();
+        $result = "";
+        foreach ($col as $item){
+            $result = "$result<div class=\"cell\">
+                            <div class=\"tit\"><a id=\"".$item["id"]."\" href=\"".$item["href"]."\" target=\"_blank\" rel=\"nofollow\">".$item["title"]."</a></div>
+                            <div class=\"num\">".$item["num"]."</div>
+                            <div class=\"char\">
+                                <span class=\"line\">".$item["char"]."</span>
+                            </div>
+                        </div>";
+        }
+
+        return array(
+            "result"=> $result
+        );
+    }
 
     /**
      * 首页成交量排行榜
@@ -605,12 +679,12 @@ class MobileController extends Controller {
             foreach ($col as $document) {
                 if($flage){
                     $defaultConceptid = $document["index"];
-                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\" class=\"active\">" .$document["title"]["en"]."</a>";
+                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\" class=\"active\">" .$document["title"]."</a>";
                 }
                 else{
-                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\">" .$document["title"]["en"]."</a>";
+                    $title = $title."<a href=\"javascript:void(0);\" onclick=\"util.loadconcept(" .$document["index"]. ")\">" .$document["title"]."</a>";
                 }
-
+                $col->purl($document["price24H"]);
                 $flage = false;
             }
         }
@@ -627,16 +701,17 @@ class MobileController extends Controller {
                 $updown = "tags-red";
             }
 
-            $trs = "$trs<tr>
+            $trs = "<tr>
                 <td>
-                    <a href=\"currencies.html?currency=".$document["code"]."/\" target=\"_blank\" title=\"".$document["title"]["cn"]."\">
+                    <a href=\"currencies.html?currency=".$document["code"]."/\" target=\"_blank\" title=\"".$document["title"]["en"]."\">
                     <img src=\"".$icon."\">
-                        ".$document["title"]["cn"]."
+                        ".$document["title"]["en"]."
                     </a>
                 </td>
                 <td>￥".$document["price"]["cny"]."</td>
                 <td><span class=\"".$updown."\">".$floatRate."%</span>
                 </td>
+                <td>".$document["price24H"]."</td>
                 </tr>";
         }
 
@@ -809,6 +884,7 @@ class MobileController extends Controller {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        //curl_setopt($ch, CURLOPT_PROXY, IP);
         return json_decode(curl_exec($ch));
     }
 
